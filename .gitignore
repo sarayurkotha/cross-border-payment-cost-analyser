@@ -1,0 +1,7 @@
+~$*.xlsx
+.DS_Store
+Thumbs.db
+
+# Full raw download (49MB, all 41-74 columns) - kept local only.
+# Only the trimmed column subset in data/ is committed. See README.
+data/raw/
