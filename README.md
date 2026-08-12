@@ -125,11 +125,33 @@ Chart exports referenced in this README and the article live in `outputs/`:
 
 ## Reproducing this analysis
 
+No API key needed for this project - it's pure data analysis, no LLM calls.
+
+**1. Clone the repo**
+
 ```bash
+git clone https://github.com/sarayurkotha/cross-border-payment-cost-analyser.git
+cd cross-border-payment-cost-analyser
+```
+
+**2. Install the dependencies** (a virtual environment is optional but keeps
+this separate from other Python projects on your machine)
+
+```bash
+python -m venv venv
+venv\Scripts\activate        # Windows - on macOS/Linux use: source venv/bin/activate
 pip install pandas openpyxl matplotlib plotly kaleido
-# 1. Download the raw workbook from remittanceprices.worldbank.org/data-download
-#    and place it at data/raw/remittance_prices_raw.xlsx
-python src/prepare_data.py     # -> data/remittance_prices_selected_columns.csv
+```
+
+**3. Get the raw data** - download the full dataset from
+[remittanceprices.worldbank.org/data-download](https://remittanceprices.worldbank.org/data-download)
+and save it as `data/raw/remittance_prices_raw.xlsx` (this file isn't
+committed to the repo - see "Data source" above for why).
+
+**4. Run the scripts in order**
+
+```bash
+python src/prepare_data.py     # -> data/remittance_prices_selected_columns.csv (trims to the columns actually used)
 python src/build_analysis.py   # -> outputs/*.png/*.html + analysis/CrossBorderPayments_Analysis.xlsx
 ```
 
