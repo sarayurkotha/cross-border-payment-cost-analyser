@@ -16,6 +16,8 @@ OUTPUT_PATH = "data/remittance_prices_selected_columns.csv"
 #   period              - quarter label, e.g. "2016_2Q" -> trend chart, slicer
 #   source_name         - sending country -> corridor grouping, heatmap
 #   destination_name    - receiving country -> corridor grouping, heatmap
+#   destination_code    - ISO 3166-1 alpha-3 code -> choropleth map (plotly needs
+#                         a country code, not a name, to place shading correctly)
 #   firm_type           - Bank / Money Transfer Operator / etc. -> provider comparison
 #   corridor            - source+destination code -> convenience key
 #   cc1 total cost %    - total cost sending the equivalent of $200 (the World Bank's
@@ -25,6 +27,7 @@ COLUMNS = [
     "period",
     "source_name",
     "destination_name",
+    "destination_code",
     "firm_type",
     "corridor",
     "cc1 total cost %",

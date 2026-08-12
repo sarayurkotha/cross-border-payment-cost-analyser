@@ -1,10 +1,12 @@
 """
-Runs the 5 analyses described in README.md against the trimmed dataset and produces:
+Runs the analyses described in README.md against the trimmed dataset and produces:
   - outputs/chart1_top_corridors.png
   - outputs/chart2_provider_comparison.png
   - outputs/chart3_cost_trend.png
   - outputs/chart4_corridor_heatmap.png
   - outputs/chart5_cheapest_vs_expensive.png
+  - outputs/chart6_choropleth.png + outputs/chart6_choropleth.html (interactive)
+  - outputs/chart7_payment_flow_diagram.png (explainer: how the money actually moves)
   - analysis/CrossBorderPayments_Analysis.xlsx (summary tables + native Excel charts
     + conditional-formatting heatmap)
 
@@ -16,6 +18,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
+import plotly.express as px
 from openpyxl import Workbook
 from openpyxl.chart import BarChart, LineChart, Reference
 from openpyxl.formatting.rule import ColorScaleRule
@@ -177,6 +180,99 @@ def chart5_cheapest_vs_expensive(df: pd.DataFrame, corridors: pd.DataFrame) -> N
     plt.close(fig)
 
 
+def chart6_choropleth(df: pd.DataFrame) -> pd.DataFrame:
+    # This is the cost to RECEIVE money in each country, averaged across every
+    # sending country and provider that quotes a price into it - "how expensive is
+    # it to be on the receiving end of a remittance here?" grouping by
+    # destination_code (not destination_name) because that's what plotly's map
+    # needs to know where to draw the shading.
+    by_country = df.groupby(["destination_code", "destination_name"])["total_cost_pct"].agg(
+        ["mean", "count"]
+    ).reset_index()
+    by_country = by_country[by_country["count"] >= MIN_OBSERVATIONS]
+
+    fig = px.choropleth(
+        by_country,
+        locations="destination_code",
+        locationmode="ISO-3",
+        color="mean",
+        hover_name="destination_name",
+        hover_data={"destination_code": False, "count": True, "mean": ":.2f"},
+        color_continuous_scale="RdYlGn_r",
+        labels={"mean": "Avg. total cost (%)", "count": "Observations"},
+        title="Average cost to receive a remittance, by country",
+    )
+    fig.update_layout(
+        font_color="#102428",
+        title_font_size=18,
+        margin=dict(l=10, r=10, t=60, b=10),
+        coloraxis_colorbar_title="Avg. cost (%)",
+    )
+    fig.write_image(f"{OUTPUTS_DIR}/chart6_choropleth.png", width=1400, height=800, scale=2)
+    fig.write_html(f"{OUTPUTS_DIR}/chart6_choropleth.html", include_plotlyjs="cdn")
+    return by_country
+
+
+def chart7_payment_flow_diagram(df: pd.DataFrame) -> None:
+    """
+    A plain-English explainer, not a data chart: shows why a bank transfer and a
+    mobile/digital transfer end up costing such different amounts for the same
+    $200. Each box the money passes through is a place a fee or FX margin can be
+    added - more boxes (the bank path) means more places to lose money.
+    """
+    bank_avg = df[df["firm_type"] == "Bank"]["total_cost_pct"].mean()
+    mobile_avg = df[df["firm_type"] == "Mobile Operator"]["total_cost_pct"].mean()
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.set_xlim(0, 12)
+    ax.set_ylim(0, 5.6)
+    ax.axis("off")
+
+    def box(x: float, y: float, w: float, label: str, color: str) -> None:
+        ax.add_patch(
+            plt.Rectangle((x, y), w, 0.9, facecolor=color, edgecolor=TEAL_DARK, linewidth=1.2, zorder=2)
+        )
+        ax.text(x + w / 2, y + 0.45, label, ha="center", va="center", fontsize=9, color="white", zorder=3, wrap=True)
+
+    def arrow(x_from: float, x_to: float, y: float, note: str = "") -> None:
+        ax.annotate(
+            "", xy=(x_to, y), xytext=(x_from, y),
+            arrowprops=dict(arrowstyle="-|>", color=TEAL_DARK, linewidth=1.4),
+            zorder=1,
+        )
+        if note:
+            ax.text((x_from + x_to) / 2, y + 0.18, note, ha="center", va="bottom", fontsize=7.5, color="#5a6c70")
+
+    # Bank path: more stops between sender and recipient
+    y_bank = 3.6
+    ax.text(0.1, y_bank + 1.5, "Typical bank transfer", fontsize=11, fontweight="bold", color=TEAL_DARK)
+    boxes_bank = [
+        (0.1, "Sender"), (2.0, "Sending\nbank"), (3.9, "Correspondent\nbank"),
+        (5.8, "Receiving\nbank"), (7.7, "Recipient"),
+    ]
+    for x, label in boxes_bank:
+        box(x, y_bank, 1.7, label, CORAL)
+    for (x1, _), (x2, _) in zip(boxes_bank, boxes_bank[1:]):
+        arrow(x1 + 1.7, x2, y_bank + 1.0, "fee / FX margin")
+    ax.text(9.7, y_bank + 0.45, f"~{bank_avg:.1f}% avg", fontsize=10, fontweight="bold", color=CORAL, va="center")
+
+    # Digital path: sender and recipient's providers already hold local balances,
+    # so money moves without a correspondent-bank hop in the middle.
+    y_digital = 0.9
+    ax.text(0.1, y_digital + 1.5, "Typical mobile / digital transfer", fontsize=11, fontweight="bold", color=TEAL_DARK)
+    boxes_digital = [(0.1, "Sender"), (2.0, "Digital\nprovider"), (3.9, "Recipient")]
+    for x, label in boxes_digital:
+        box(x, y_digital, 1.7, label, TEAL)
+    for (x1, _), (x2, _) in zip(boxes_digital, boxes_digital[1:]):
+        arrow(x1 + 1.7, x2, y_digital + 1.0, "fee / FX margin")
+    ax.text(9.7, y_digital + 0.45, f"~{mobile_avg:.1f}% avg", fontsize=10, fontweight="bold", color=TEAL, va="center")
+
+    fig.suptitle("Same $200 transfer, two different paths", fontsize=13)
+    fig.tight_layout()
+    fig.savefig(f"{OUTPUTS_DIR}/chart7_payment_flow_diagram.png", dpi=150)
+    plt.close(fig)
+
+
 def build_workbook(
     corridors: pd.DataFrame,
     provider_avg: pd.Series,
@@ -260,6 +356,8 @@ def main() -> None:
     trend = chart3_cost_trend(df)
     heatmap = chart4_corridor_heatmap(df)
     chart5_cheapest_vs_expensive(df, corridors)
+    chart6_choropleth(df)
+    chart7_payment_flow_diagram(df)
     build_workbook(corridors, provider_avg, trend, heatmap)
 
     print("Cheapest corridor:", corridors.index[0], round(corridors.iloc[0]["mean"], 2))

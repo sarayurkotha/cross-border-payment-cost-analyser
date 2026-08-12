@@ -17,12 +17,30 @@ so this repo works from a snapshot downloaded manually.
   gitignored to keep the repo lightweight. Get your own copy from the link above if
   you want to regenerate the trimmed data from scratch.
 - `data/remittance_prices_selected_columns.csv` — **committed**, trimmed to only the
-  6 columns this analysis uses (`period`, `source_name`, `destination_name`,
-  `firm_type`, `corridor`, `total_cost_pct`), cutting the file from 49MB to ~15MB.
-  Regenerate it from the raw file with `python src/prepare_data.py`.
+  7 columns this analysis uses (`period`, `source_name`, `destination_name`,
+  `destination_code`, `firm_type`, `corridor`, `total_cost_pct`), cutting the file
+  from 49MB to ~16MB. `destination_code` (ISO 3166-1 alpha-3) is the one column kept
+  purely for the choropleth map - Plotly needs a country code, not a name, to place
+  shading correctly. Regenerate it from the raw file with `python src/prepare_data.py`.
 - Cost metric used: total cost of sending the equivalent of $200 (`cc1 total cost %`
   in the raw file) — this is the same basis the World Bank uses for its own SDG 10.c
   remittance-cost indicator.
+
+## Pipeline
+
+```mermaid
+flowchart LR
+    A["World Bank raw download\n49MB, 74 columns"] -->|prepare_data.py| B["Trimmed CSV\n16MB, 7 columns"]
+    B -->|build_analysis.py| C["Aggregations\npandas groupby / pivot"]
+    C --> D["7 chart PNGs +\n1 interactive HTML map\nmatplotlib / Plotly"]
+    C --> E["Excel workbook\nopenpyxl: tables + charts + heatmap"]
+    D --> F["README findings +\nLinkedIn article"]
+    E --> F
+```
+
+Each box is one step you can run and inspect on its own — `prepare_data.py` only
+trims columns, `build_analysis.py` only aggregates and charts. Nothing is hidden
+inside a single script.
 
 ## Analysis
 
@@ -44,6 +62,10 @@ average.
    data volume, for legibility) with a green-to-red colour scale on average cost.
 5. **Cheapest vs most expensive corridors** — the 5 cheapest and 5 most expensive
    corridors side by side, split by provider type.
+6. **Choropleth map** — every receiving country shaded by its average cost across
+   all sending corridors and providers, built with Plotly (Excel can't draw a real
+   geographic map on its own without Power BI or a similar add-in). Static PNG for
+   the README plus an interactive HTML version with hover tooltips.
 
 Workbook: `analysis/CrossBorderPayments_Analysis.xlsx`
 
@@ -66,32 +88,49 @@ Workbook: `analysis/CrossBorderPayments_Analysis.xlsx`
   19.6% — banks cost roughly 2x a typical MTO for the same transfer.
 - **Overall**: median cost across all 247k quotes is 5.36% (mean 6.95%, pulled up by
   a long tail of expensive bank quotes) — still well above the UN SDG target of 3%.
+- **Geography**: the choropleth makes the cheap/expensive split visible at a glance.
+  Cheapest countries to *receive* into are Azerbaijan, Georgia, Kazakhstan, Belarus
+  and Uzbekistan (all under 2%) — the same near-Russia cluster as the cheapest
+  corridors above. Most expensive are Korea Rep. (19.0%), Angola (19.0%), Namibia
+  (18.3%), Botswana (17.5%) and Eswatini (17.4%) — Southern Africa stands out as a
+  visibly red region on the map, distinct from the rest of Sub-Saharan Africa.
+
+## Article
+
+[Why does it still cost more than 9% to send money to Kenya?](ARTICLE.md) — a
+write-up of these findings aimed at a LinkedIn audience, explaining the structural
+reasons behind corridor cost (correspondent banking, FX margins, compliance costs)
+using this dataset to illustrate each one.
 
 ## Outputs
 
-Chart exports (PNG) referenced in this README and used in the LinkedIn write-up
-live in `outputs/`:
+Chart exports referenced in this README and the article live in `outputs/`:
 
 - `outputs/chart1_top_corridors.png`
 - `outputs/chart2_provider_comparison.png`
 - `outputs/chart3_cost_trend.png`
 - `outputs/chart4_corridor_heatmap.png`
 - `outputs/chart5_cheapest_vs_expensive.png`
+- `outputs/chart6_choropleth.png` + `outputs/chart6_choropleth.html` (open the
+  `.html` file directly in a browser for hover tooltips per country)
+- `outputs/chart7_payment_flow_diagram.png` — plain-English explainer of why a
+  bank transfer and a digital transfer end up costing such different amounts
 
 ## Reproducing this analysis
 
 ```bash
-pip install pandas openpyxl matplotlib
+pip install pandas openpyxl matplotlib plotly kaleido
 # 1. Download the raw workbook from remittanceprices.worldbank.org/data-download
 #    and place it at data/raw/remittance_prices_raw.xlsx
 python src/prepare_data.py     # -> data/remittance_prices_selected_columns.csv
-python src/build_analysis.py   # -> outputs/*.png + analysis/CrossBorderPayments_Analysis.xlsx
+python src/build_analysis.py   # -> outputs/*.png/*.html + analysis/CrossBorderPayments_Analysis.xlsx
 ```
 
 ## Repository structure
 
 ```
 README.md
+ARTICLE.md
 data/
   raw/                                    (gitignored - not committed)
     remittance_prices_raw.xlsx
@@ -107,4 +146,7 @@ outputs/
   chart3_cost_trend.png
   chart4_corridor_heatmap.png
   chart5_cheapest_vs_expensive.png
+  chart6_choropleth.png
+  chart6_choropleth.html
+  chart7_payment_flow_diagram.png
 ```
