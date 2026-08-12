@@ -140,7 +140,7 @@ this separate from other Python projects on your machine)
 ```bash
 python -m venv venv
 venv\Scripts\activate        # Windows - on macOS/Linux use: source venv/bin/activate
-pip install pandas openpyxl matplotlib plotly kaleido
+pip install -r requirements.txt
 ```
 
 **3. Get the raw data** - download the full dataset from
@@ -160,6 +160,8 @@ python src/build_analysis.py   # -> outputs/*.png/*.html + analysis/CrossBorderP
 ```
 README.md
 ARTICLE.md
+requirements.txt
+LICENSE
 data/
   raw/                                    (gitignored - not committed)
     remittance_prices_raw.xlsx
