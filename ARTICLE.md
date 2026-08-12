@@ -1,14 +1,12 @@
 <!--
 LinkedIn write-up of this project's findings. LinkedIn posts don't render Markdown
 or pull images from GitHub links, so when posting: copy the text below into the post
-composer (the image/link markdown lines won't render there - just skip over them)
-and attach the actual files from outputs/ as native image/GIF uploads at the
-matching points. If you want a shorter native post, lead with chart7's animated
-GIF, chart2 (provider comparison) and chart6 (the map) - those three carry the
-whole argument on their own; the rest is worth keeping in this file and the GitHub
-repo for anyone who reads on. The "interactive version" links only work once
-pushed to GitHub - they route through htmlpreview.github.io since GitHub won't
-run .html files inline itself.
+composer (the image markdown lines won't render there - just skip over them) and
+attach the actual files from outputs/ as native image/GIF uploads at the matching
+points. If you want a shorter native post, lead with chart7's animated GIF, chart2
+(provider comparison) and chart6 (the map) - those three carry the whole argument
+on their own; the rest is worth keeping in this file and the GitHub repo for
+anyone who reads on.
 -->
 
 # Why does it still cost more than 9% to send money to Kenya?
@@ -57,8 +55,6 @@ for Kenya specifically the bank-to-mobile gap widens to **4.5x** (23.6% vs 5.1%)
 
 ![Average cost by provider type](outputs/chart2_provider_comparison.png)
 
-*[Interactive version, hover for exact values](https://htmlpreview.github.io/?https://github.com/sarayurkotha/cross-border-payment-cost-analyser/blob/main/outputs/chart2_provider_comparison.html)*
-
 **1. Correspondent banking adds hops, and every hop takes a cut.** That's the
 mechanism in the diagram above, and it's the single biggest reason the Bank bar
 above towers over the other three.
@@ -87,8 +83,6 @@ the same competitive discipline.
 
 ![10 cheapest and 10 most expensive corridors](outputs/chart1_top_corridors.png)
 
-*[Interactive version, hover for exact values](https://htmlpreview.github.io/?https://github.com/sarayurkotha/cross-border-payment-cost-analyser/blob/main/outputs/chart1_top_corridors.html)*
-
 The 10 cheapest corridors are dominated by Russia's near neighbours — Russian
 Federation to Azerbaijan, Georgia, Armenia, Kyrgyz Republic, Moldova, Kazakhstan,
 Belarus, Ukraine and Tajikistan all sit under 2%. The most expensive corridor,
@@ -96,8 +90,6 @@ Türkiye to Bulgaria at 64.5%, is a genuine outlier worth explaining rather than
 just reporting.
 
 ![Cost trend over time by provider type](outputs/chart3_cost_trend.png)
-
-*[Interactive version, hover for exact values](https://htmlpreview.github.io/?https://github.com/sarayurkotha/cross-border-payment-cost-analyser/blob/main/outputs/chart3_cost_trend.html)*
 
 That 64.5% average is driven almost entirely by the Bank channel on that specific
 corridor, which climbed from ~50-90% in late 2022 to over 200-290% by early 2025
@@ -112,8 +104,6 @@ typical 24.9%.
 
 ![Average cost to receive a remittance, by country](outputs/chart6_choropleth.png)
 
-*[Interactive version, hover any country for its exact average and observation count](https://htmlpreview.github.io/?https://github.com/sarayurkotha/cross-border-payment-cost-analyser/blob/main/outputs/chart6_choropleth.html)*
-
 Shading every receiving country by its average cost makes the geography obvious.
 The cheapest places to receive money into are Azerbaijan, Georgia, Kazakhstan,
 Belarus and Uzbekistan (all under 2%) — the same near-Russia cluster visible in
@@ -124,8 +114,6 @@ rest of Sub-Saharan Africa.
 
 ![Corridor heatmap, top 15 sending x receiving countries](outputs/chart4_corridor_heatmap.png)
 
-*[Interactive version, hover for exact values](https://htmlpreview.github.io/?https://github.com/sarayurkotha/cross-border-payment-cost-analyser/blob/main/outputs/chart4_corridor_heatmap.html)*
-
 Zooming into the highest-volume corridors specifically (above), the same divide
 holds at a finer grain: sending *from* Malaysia, Singapore, or the UAE is
 consistently cheap (dark green into nearly every destination shown), while South
@@ -133,8 +121,6 @@ Africa is the one sending country that's expensive almost everywhere it appears
 — up to 19% into China specifically, and orange (~14-15%) into Nigeria.
 
 ![5 cheapest vs 5 most expensive corridors, by provider type](outputs/chart5_cheapest_vs_expensive.png)
-
-*[Interactive version, hover for exact values](https://htmlpreview.github.io/?https://github.com/sarayurkotha/cross-border-payment-cost-analyser/blob/main/outputs/chart5_cheapest_vs_expensive.html)*
 
 Putting the cheapest and most expensive corridors side by side, split by
 provider, makes the pattern concrete: on the cheap corridors, Bank and MTO

@@ -23,8 +23,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 from PIL import Image
 from openpyxl import Workbook
 from openpyxl.chart import BarChart, LineChart, Reference
@@ -95,22 +93,6 @@ def chart1_top_corridors(df: pd.DataFrame) -> pd.DataFrame:
     fig.tight_layout()
     fig.savefig(f"{OUTPUTS_DIR}/chart1_top_corridors.png", dpi=150)
     plt.close(fig)
-
-    # Interactive companion: same two panels, but hovering a bar shows the exact
-    # cost and how many price quotes it's averaged from.
-    ifig = make_subplots(rows=1, cols=2, subplot_titles=(f"{TOP_N} cheapest corridors", f"{TOP_N} most expensive corridors"))
-    ifig.add_trace(
-        go.Bar(y=cheap.index, x=cheap["mean"], orientation="h", marker_color=TEAL,
-               customdata=cheap["count"], hovertemplate="%{y}<br>%{x:.2f}%<br>%{customdata} quotes<extra></extra>"),
-        row=1, col=1,
-    )
-    ifig.add_trace(
-        go.Bar(y=expensive.index, x=expensive["mean"], orientation="h", marker_color=CORAL,
-               customdata=expensive["count"], hovertemplate="%{y}<br>%{x:.2f}%<br>%{customdata} quotes<extra></extra>"),
-        row=1, col=2,
-    )
-    ifig.update_layout(showlegend=False, title="Cost to send $200-equivalent, by corridor (hover for exact values)")
-    ifig.write_html(f"{OUTPUTS_DIR}/chart1_top_corridors.html", include_plotlyjs="cdn")
     return corridors
 
 
@@ -125,15 +107,6 @@ def chart2_provider_comparison(df: pd.DataFrame) -> pd.Series:
     fig.tight_layout()
     fig.savefig(f"{OUTPUTS_DIR}/chart2_provider_comparison.png", dpi=150)
     plt.close(fig)
-
-    ifig = go.Figure(
-        go.Bar(
-            y=by_type.index, x=by_type["mean"], orientation="h", marker_color=TEAL,
-            customdata=by_type["count"], hovertemplate="%{y}<br>%{x:.2f}%<br>%{customdata} quotes<extra></extra>",
-        )
-    )
-    ifig.update_layout(title="Average cost by provider type (hover for exact values)", xaxis_title="Avg. total cost (%)")
-    ifig.write_html(f"{OUTPUTS_DIR}/chart2_provider_comparison.html", include_plotlyjs="cdn")
     return by_type["mean"]
 
 
@@ -160,15 +133,6 @@ def chart3_cost_trend(df: pd.DataFrame) -> pd.DataFrame:
     fig.tight_layout()
     fig.savefig(f"{OUTPUTS_DIR}/chart3_cost_trend.png", dpi=150)
     plt.close(fig)
-
-    ifig = px.line(
-        pivot.reset_index().melt(id_vars="period", var_name="firm_type", value_name="cost"),
-        x="period", y="cost", color="firm_type", markers=True,
-        title="Cost trend over time, by provider type (hover for exact values)",
-        labels={"cost": "Avg. total cost (%)", "period": "Quarter"},
-    )
-    ifig.update_xaxes(tickangle=90)
-    ifig.write_html(f"{OUTPUTS_DIR}/chart3_cost_trend.html", include_plotlyjs="cdn")
     return pivot
 
 
@@ -194,13 +158,6 @@ def chart4_corridor_heatmap(df: pd.DataFrame) -> pd.DataFrame:
     fig.tight_layout()
     fig.savefig(f"{OUTPUTS_DIR}/chart4_corridor_heatmap.png", dpi=150)
     plt.close(fig)
-
-    ifig = px.imshow(
-        matrix, color_continuous_scale="RdYlGn_r", aspect="auto",
-        labels=dict(x="Receiving country", y="Sending country", color="Avg. cost (%)"),
-        title=f"Avg. cost (%) - top {HEATMAP_TOP_COUNTRIES} sending x receiving countries (hover for exact values)",
-    )
-    ifig.write_html(f"{OUTPUTS_DIR}/chart4_corridor_heatmap.html", include_plotlyjs="cdn")
     return matrix
 
 
@@ -226,15 +183,6 @@ def chart5_cheapest_vs_expensive(df: pd.DataFrame, corridors: pd.DataFrame) -> N
     fig.tight_layout()
     fig.savefig(f"{OUTPUTS_DIR}/chart5_cheapest_vs_expensive.png", dpi=150)
     plt.close(fig)
-
-    ifig = px.bar(
-        pivot.reset_index().melt(id_vars="corridor_label", var_name="firm_type", value_name="cost").dropna(),
-        x="corridor_label", y="cost", color="firm_type", barmode="group",
-        title="5 cheapest vs 5 most expensive corridors, by provider type (hover for exact values)",
-        labels={"cost": "Avg. total cost (%)", "corridor_label": "Corridor"},
-    )
-    ifig.update_xaxes(tickangle=45)
-    ifig.write_html(f"{OUTPUTS_DIR}/chart5_cheapest_vs_expensive.html", include_plotlyjs="cdn")
 
 
 def chart6_choropleth(df: pd.DataFrame) -> pd.DataFrame:

@@ -106,18 +106,18 @@ using this dataset to illustrate each one.
 
 ## Outputs
 
-Chart exports referenced in this README and the article live in `outputs/`. Every
-chart has a static `.png` (what's embedded in the README/article) and a matching
-interactive `.html` with hover tooltips for exact values. GitHub serves `.html`
-files as plain text rather than rendering them, so the links below go through
-[htmlpreview.github.io](https://htmlpreview.github.io) to actually display them:
+Chart exports referenced in this README and the article live in `outputs/`:
 
-- [chart1 - top corridors](https://htmlpreview.github.io/?https://github.com/sarayurkotha/cross-border-payment-cost-analyser/blob/main/outputs/chart1_top_corridors.html)
-- [chart2 - provider comparison](https://htmlpreview.github.io/?https://github.com/sarayurkotha/cross-border-payment-cost-analyser/blob/main/outputs/chart2_provider_comparison.html)
-- [chart3 - cost trend](https://htmlpreview.github.io/?https://github.com/sarayurkotha/cross-border-payment-cost-analyser/blob/main/outputs/chart3_cost_trend.html)
-- [chart4 - corridor heatmap](https://htmlpreview.github.io/?https://github.com/sarayurkotha/cross-border-payment-cost-analyser/blob/main/outputs/chart4_corridor_heatmap.html)
-- [chart5 - cheapest vs expensive](https://htmlpreview.github.io/?https://github.com/sarayurkotha/cross-border-payment-cost-analyser/blob/main/outputs/chart5_cheapest_vs_expensive.html)
-- [chart6 - choropleth map](https://htmlpreview.github.io/?https://github.com/sarayurkotha/cross-border-payment-cost-analyser/blob/main/outputs/chart6_choropleth.html)
+- `chart1_top_corridors.png`
+- `chart2_provider_comparison.png`
+- `chart3_cost_trend.png`
+- `chart4_corridor_heatmap.png`
+- `chart5_cheapest_vs_expensive.png`
+- `chart6_choropleth.png` + `chart6_choropleth.html` — the `.html` version is
+  interactive (hover any country for its exact value), but only works if you
+  download it and open it locally; GitHub serves `.html` files as plain text
+  rather than rendering them, so it won't work from a browser tab pointed at
+  the GitHub page itself
 - `chart7_payment_flow_diagram.png` — plain-English explainer of why a bank
   transfer and a digital transfer end up costing such different amounts
 - `chart7_payment_flow_animation.gif` — the same explainer animated, each block
