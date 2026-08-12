@@ -7,6 +7,8 @@ Runs the analyses described in README.md against the trimmed dataset and produce
   - outputs/chart5_cheapest_vs_expensive.png
   - outputs/chart6_choropleth.png + outputs/chart6_choropleth.html (interactive)
   - outputs/chart7_payment_flow_diagram.png (explainer: how the money actually moves)
+  - outputs/chart7_payment_flow_animation.gif (same explainer, animated: each block
+    lights up in sequence to show the money moving through the chain)
   - analysis/CrossBorderPayments_Analysis.xlsx (summary tables + native Excel charts
     + conditional-formatting heatmap)
 
@@ -14,11 +16,16 @@ Minimum observation count per corridor/group is enforced throughout so a single
 one-off quote can't distort an average.
 """
 
+import io
+
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+from PIL import Image
 from openpyxl import Workbook
 from openpyxl.chart import BarChart, LineChart, Reference
 from openpyxl.formatting.rule import ColorScaleRule
@@ -88,6 +95,22 @@ def chart1_top_corridors(df: pd.DataFrame) -> pd.DataFrame:
     fig.tight_layout()
     fig.savefig(f"{OUTPUTS_DIR}/chart1_top_corridors.png", dpi=150)
     plt.close(fig)
+
+    # Interactive companion: same two panels, but hovering a bar shows the exact
+    # cost and how many price quotes it's averaged from.
+    ifig = make_subplots(rows=1, cols=2, subplot_titles=(f"{TOP_N} cheapest corridors", f"{TOP_N} most expensive corridors"))
+    ifig.add_trace(
+        go.Bar(y=cheap.index, x=cheap["mean"], orientation="h", marker_color=TEAL,
+               customdata=cheap["count"], hovertemplate="%{y}<br>%{x:.2f}%<br>%{customdata} quotes<extra></extra>"),
+        row=1, col=1,
+    )
+    ifig.add_trace(
+        go.Bar(y=expensive.index, x=expensive["mean"], orientation="h", marker_color=CORAL,
+               customdata=expensive["count"], hovertemplate="%{y}<br>%{x:.2f}%<br>%{customdata} quotes<extra></extra>"),
+        row=1, col=2,
+    )
+    ifig.update_layout(showlegend=False, title="Cost to send $200-equivalent, by corridor (hover for exact values)")
+    ifig.write_html(f"{OUTPUTS_DIR}/chart1_top_corridors.html", include_plotlyjs="cdn")
     return corridors
 
 
@@ -102,6 +125,15 @@ def chart2_provider_comparison(df: pd.DataFrame) -> pd.Series:
     fig.tight_layout()
     fig.savefig(f"{OUTPUTS_DIR}/chart2_provider_comparison.png", dpi=150)
     plt.close(fig)
+
+    ifig = go.Figure(
+        go.Bar(
+            y=by_type.index, x=by_type["mean"], orientation="h", marker_color=TEAL,
+            customdata=by_type["count"], hovertemplate="%{y}<br>%{x:.2f}%<br>%{customdata} quotes<extra></extra>",
+        )
+    )
+    ifig.update_layout(title="Average cost by provider type (hover for exact values)", xaxis_title="Avg. total cost (%)")
+    ifig.write_html(f"{OUTPUTS_DIR}/chart2_provider_comparison.html", include_plotlyjs="cdn")
     return by_type["mean"]
 
 
@@ -128,6 +160,15 @@ def chart3_cost_trend(df: pd.DataFrame) -> pd.DataFrame:
     fig.tight_layout()
     fig.savefig(f"{OUTPUTS_DIR}/chart3_cost_trend.png", dpi=150)
     plt.close(fig)
+
+    ifig = px.line(
+        pivot.reset_index().melt(id_vars="period", var_name="firm_type", value_name="cost"),
+        x="period", y="cost", color="firm_type", markers=True,
+        title="Cost trend over time, by provider type (hover for exact values)",
+        labels={"cost": "Avg. total cost (%)", "period": "Quarter"},
+    )
+    ifig.update_xaxes(tickangle=90)
+    ifig.write_html(f"{OUTPUTS_DIR}/chart3_cost_trend.html", include_plotlyjs="cdn")
     return pivot
 
 
@@ -153,6 +194,13 @@ def chart4_corridor_heatmap(df: pd.DataFrame) -> pd.DataFrame:
     fig.tight_layout()
     fig.savefig(f"{OUTPUTS_DIR}/chart4_corridor_heatmap.png", dpi=150)
     plt.close(fig)
+
+    ifig = px.imshow(
+        matrix, color_continuous_scale="RdYlGn_r", aspect="auto",
+        labels=dict(x="Receiving country", y="Sending country", color="Avg. cost (%)"),
+        title=f"Avg. cost (%) - top {HEATMAP_TOP_COUNTRIES} sending x receiving countries (hover for exact values)",
+    )
+    ifig.write_html(f"{OUTPUTS_DIR}/chart4_corridor_heatmap.html", include_plotlyjs="cdn")
     return matrix
 
 
@@ -178,6 +226,15 @@ def chart5_cheapest_vs_expensive(df: pd.DataFrame, corridors: pd.DataFrame) -> N
     fig.tight_layout()
     fig.savefig(f"{OUTPUTS_DIR}/chart5_cheapest_vs_expensive.png", dpi=150)
     plt.close(fig)
+
+    ifig = px.bar(
+        pivot.reset_index().melt(id_vars="corridor_label", var_name="firm_type", value_name="cost").dropna(),
+        x="corridor_label", y="cost", color="firm_type", barmode="group",
+        title="5 cheapest vs 5 most expensive corridors, by provider type (hover for exact values)",
+        labels={"cost": "Avg. total cost (%)", "corridor_label": "Corridor"},
+    )
+    ifig.update_xaxes(tickangle=45)
+    ifig.write_html(f"{OUTPUTS_DIR}/chart5_cheapest_vs_expensive.html", include_plotlyjs="cdn")
 
 
 def chart6_choropleth(df: pd.DataFrame) -> pd.DataFrame:
@@ -273,6 +330,109 @@ def chart7_payment_flow_diagram(df: pd.DataFrame) -> None:
     plt.close(fig)
 
 
+# Same layout as chart7_payment_flow_diagram, but re-drawn once per frame with a
+# growing number of "lit" boxes, so the GIF reads as money moving block to block.
+_FLOW_BOXES_BANK = [
+    (0.1, "Sender"), (2.0, "Sending\nbank"), (3.9, "Correspondent\nbank"),
+    (5.8, "Receiving\nbank"), (7.7, "Recipient"),
+]
+_FLOW_BOXES_DIGITAL = [(0.1, "Sender"), (2.0, "Digital\nprovider"), (3.9, "Recipient")]
+_FLOW_UNLIT_FILL = "#d9dee0"
+_FLOW_UNLIT_EDGE = "#b0b8bb"
+_FLOW_UNLIT_TEXT = "#7c8a8f"
+
+
+def _flow_glow(ax, x: float, y: float, w: float, h: float, color: str) -> None:
+    # A real blur isn't available in matplotlib without extra dependencies, so the
+    # "glow" is faked with several progressively larger, progressively fainter
+    # copies of the same rectangle stacked behind the real one - the same trick
+    # used for CSS box-shadow halos.
+    for i in range(4, 0, -1):
+        pad = 0.05 * i
+        ax.add_patch(
+            plt.Rectangle(
+                (x - pad, y - pad), w + 2 * pad, h + 2 * pad,
+                facecolor=color, edgecolor="none", alpha=0.05 * i, zorder=1,
+            )
+        )
+
+
+def _flow_draw_frame(bank_avg: float, mobile_avg: float, lit_bank: int, lit_digital: int):
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.set_xlim(0, 12)
+    ax.set_ylim(0, 5.6)
+    ax.axis("off")
+
+    def lane(boxes: list, y: float, color: str, avg: float, lit_count: int, title: str) -> None:
+        ax.text(0.1, y + 1.5, title, fontsize=11, fontweight="bold", color=TEAL_DARK)
+        for idx, (x, label) in enumerate(boxes):
+            lit = idx < lit_count
+            fill = color if lit else _FLOW_UNLIT_FILL
+            if lit:
+                _flow_glow(ax, x, y, 1.7, 0.9, color)
+            ax.add_patch(
+                plt.Rectangle(
+                    (x, y), 1.7, 0.9, facecolor=fill,
+                    edgecolor=TEAL_DARK if lit else _FLOW_UNLIT_EDGE, linewidth=1.2, zorder=2,
+                )
+            )
+            ax.text(
+                x + 0.85, y + 0.45, label, ha="center", va="center", fontsize=9,
+                color="white" if lit else _FLOW_UNLIT_TEXT, zorder=3,
+            )
+        for i, ((x1, _), (x2, _)) in enumerate(zip(boxes, boxes[1:])):
+            active = lit_count > i + 1
+            arrow_color = TEAL_DARK if active else "#c7cdd0"
+            ax.annotate(
+                "", xy=(x2, y + 1.0), xytext=(x1 + 1.7, y + 1.0),
+                arrowprops=dict(arrowstyle="-|>", color=arrow_color, linewidth=1.4), zorder=1,
+            )
+            if active:
+                ax.text((x1 + 1.7 + x2) / 2, y + 1.18, "fee / FX margin", ha="center", va="bottom", fontsize=7.5, color="#5a6c70")
+        if lit_count >= len(boxes):
+            ax.text(9.7, y + 0.45, f"~{avg:.1f}% avg", fontsize=10, fontweight="bold", color=color, va="center")
+
+    lane(_FLOW_BOXES_BANK, 3.6, CORAL, bank_avg, lit_bank, "Typical bank transfer")
+    lane(_FLOW_BOXES_DIGITAL, 0.9, TEAL, mobile_avg, lit_digital, "Typical mobile / digital transfer")
+
+    fig.suptitle("Same $200 transfer, two different paths", fontsize=13)
+    fig.tight_layout()
+    return fig
+
+
+def chart7_payment_flow_animation(df: pd.DataFrame) -> None:
+    bank_avg = df[df["firm_type"] == "Bank"]["total_cost_pct"].mean()
+    mobile_avg = df[df["firm_type"] == "Mobile Operator"]["total_cost_pct"].mean()
+
+    steps = max(len(_FLOW_BOXES_BANK), len(_FLOW_BOXES_DIGITAL))
+    hold_frames = 3
+
+    frames = []
+    for i in range(steps):
+        lit_bank = min(i + 1, len(_FLOW_BOXES_BANK))
+        lit_digital = min(i + 1, len(_FLOW_BOXES_DIGITAL))
+        fig = _flow_draw_frame(bank_avg, mobile_avg, lit_bank, lit_digital)
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=120)
+        plt.close(fig)
+        buf.seek(0)
+        frames.append(Image.open(buf).convert("RGB"))
+
+    for _ in range(hold_frames):
+        fig = _flow_draw_frame(bank_avg, mobile_avg, len(_FLOW_BOXES_BANK), len(_FLOW_BOXES_DIGITAL))
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=120)
+        plt.close(fig)
+        buf.seek(0)
+        frames.append(Image.open(buf).convert("RGB"))
+
+    durations = [700] * steps + [1400] * hold_frames
+    frames[0].save(
+        f"{OUTPUTS_DIR}/chart7_payment_flow_animation.gif",
+        save_all=True, append_images=frames[1:], duration=durations, loop=0, optimize=True,
+    )
+
+
 def build_workbook(
     corridors: pd.DataFrame,
     provider_avg: pd.Series,
@@ -358,6 +518,7 @@ def main() -> None:
     chart5_cheapest_vs_expensive(df, corridors)
     chart6_choropleth(df)
     chart7_payment_flow_diagram(df)
+    chart7_payment_flow_animation(df)
     build_workbook(corridors, provider_avg, trend, heatmap)
 
     print("Cheapest corridor:", corridors.index[0], round(corridors.iloc[0]["mean"], 2))
